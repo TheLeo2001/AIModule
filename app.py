@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify, render_template
-import pyaudio
 import speech_recognition as sr
 from googletrans import Translator
+import spacy
 
 app = Flask(__name__)
 translator = Translator()
+nlp = spacy.load("en_core_web_sm")
 
 @app.route("/")
 def home():
@@ -17,10 +18,28 @@ def process_message():
     return jsonify(bot_response)
 
 def generate_bot_response(user_message):
-    if any(word in user_message.lower() for word in ["translate", "translation", "how do you say"]) and ("in" in user_message.lower() or "into" in user_message.lower()):
+    doc = nlp(user_message.lower())
+    
+    # Check if user wants translation
+    if any(token.text in ["translate", "translation"] for token in doc) and ("in" in user_message.lower() or "into" in user_message.lower()):
         return translate_message(user_message)
-    else:
-        return "I'm sorry, I couldn't understand your request."
+    elif "how do you say" in user_message.lower():
+        return translate_message(user_message)
+    
+    # Check if user wants to engage in conversation about countries
+    if any(entity.label_ == "GPE" for entity in doc.ents):
+        return engage_in_country_conversation(user_message)
+    
+    # Check if user wants to engage in conversation about languages
+    if any(entity.label_ == "LANGUAGE" for entity in doc.ents):
+        return engage_in_language_conversation(user_message)
+    
+    # Check if user wants to engage in conversation
+    if any(token.pos_ in ["VERB", "NOUN"] for token in doc):
+        return engage_in_conversation(user_message)
+    
+    return "I'm sorry, I couldn't understand your request."
+
 
 def translate_message(message):
     # Extract the target language and the word/sentence to translate
@@ -42,10 +61,19 @@ def translate_message(message):
     # Translate the word/sentence to the target language
     translated_text = translator.translate(word_to_translate, dest=target_language).text
     
-    #return f"{translated_text}"
     return f"The translation of '{word_to_translate}' in {target_language} is '{translated_text}'."
 
+def engage_in_country_conversation(user_message):
+    # Simple conversation agent related to countries
+    return "That's awesome! Would you like to learn some phrases in the language of that country?"
 
+def engage_in_language_conversation(user_message):
+    # Simple conversation agent related to languages
+    return "That's interesting! Would you like to learn some phrases in that language?"
+
+def engage_in_conversation(user_message):
+    # Simple conversation agent
+    return "That's interesting! Tell me more."
 
 @app.route("/voice", methods=["POST"])
 def process_voice_input():
