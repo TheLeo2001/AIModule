@@ -35,24 +35,28 @@
     <div class="container">
         <h1 class="mt-5">Language Learning Chatbot</h1>
         <div id="chat-box" class="mt-4"></div>
-        <div id="user-input-container">
+        <div id="user-input-container" class="mt-4">
             <input type="text" id="user-input" class="form-control" placeholder="Type your message...">
             <button id="send-btn" class="btn btn-primary">Send</button>
+            <button id="voice-input" class="btn btn-success ml-2">Voice Input</button>
         </div>
     </div>
-
     <script>
         $(document).ready(function() {
             $("#send-btn").click(function() {
                 sendMessage();
             });
-
+    
             $("#user-input").keypress(function(event) {
                 if (event.which == 13) {
                     sendMessage();
                 }
             });
-
+    
+            $("#voice-input").click(function() {
+                startVoiceInput();
+            });
+    
             function sendMessage() {
                 var userMessage = $("#user-input").val();
                 if (userMessage.trim() !== "") {
@@ -61,18 +65,32 @@
                     sendUserMessage(userMessage);
                 }
             }
-
+    
             function sendUserMessage(message) {
                 $.ajax({
                     type: "POST",
                     url: "/chat",
-                    data: { user_message: message },
+                    contentType: "application/json",
+                    data: JSON.stringify({ user_message: message }),
                     success: function(response) {
                         $("#chat-box").append("<div class='chat-message'><p class='bot-message'>" + response + "</p></div>");
                     }
                 });
             }
+    
+            function startVoiceInput() {
+                $("#user-input").val("Listening...");
+                $.ajax({
+                    type: "POST",
+                    url: "/voice",
+                    success: function(response) {
+                        $("#user-input").val(response);
+                        sendMessage();
+                    }
+                });
+            }
         });
     </script>
+    
 </body>
 </html>

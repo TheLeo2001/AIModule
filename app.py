@@ -1,54 +1,26 @@
-from flask import Flask, render_template, request
-import spacy
+from flask import Flask, request, jsonify, render_template
+import pyaudio
+import speech_recognition as sr
 from googletrans import Translator
 
 app = Flask(__name__)
-nlp = spacy.load("en_core_web_sm")
 translator = Translator()
 
-@app.route('/')
+@app.route("/")
 def home():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_message = request.form['user_message']
-    bot_response = process_message(user_message)
-    return bot_response
+@app.route("/chat", methods=["POST"])
+def process_message():
+    user_message = request.json["user_message"]
+    bot_response = generate_bot_response(user_message)
+    return jsonify(bot_response)
 
-def process_message(message):
-    # Process user message using spaCy
-    doc = nlp(message)
-    
-    # Extract verbs and nouns
-    verbs = [token.text for token in doc if token.pos_ == "VERB"]
-    nouns = [token.text for token in doc if token.pos_ == "NOUN"]
-    
-     # Check if the user is asking for translation
-    if any(word in message.lower() for word in ["translate", "translation", "how do you say"]) and ("in" in message.lower() or "into" in message.lower()):
-        return translate_message(message)
-    
-    # Generate bot response based on the user's message
-    bot_response = generate_response(verbs, nouns)
-    return "Bot: " + bot_response
-
-
-
-
-
-
-
-
-def generate_response(verbs, nouns):
-    # Generate bot response based on the extracted verbs and nouns
-    if verbs and nouns:
-        return f"You mentioned {', '.join(verbs)} and {', '.join(nouns)}."
-    elif verbs:
-        return f"You mentioned {', '.join(verbs)}."
-    elif nouns:
-        return f"You mentioned {', '.join(nouns)}."
+def generate_bot_response(user_message):
+    if any(word in user_message.lower() for word in ["translate", "translation", "how do you say"]) and ("in" in user_message.lower() or "into" in user_message.lower()):
+        return translate_message(user_message)
     else:
-        return "I'm sorry, I couldn't understand your message."
+        return "I'm sorry, I couldn't understand your request."
 
 def translate_message(message):
     # Extract the target language and the word/sentence to translate
@@ -70,17 +42,27 @@ def translate_message(message):
     # Translate the word/sentence to the target language
     translated_text = translator.translate(word_to_translate, dest=target_language).text
     
+    #return f"{translated_text}"
     return f"The translation of '{word_to_translate}' in {target_language} is '{translated_text}'."
 
 
 
+@app.route("/voice", methods=["POST"])
+def process_voice_input():
+    recognizer = sr.Recognizer()
 
+    with sr.Microphone() as source:
+        print("Listening...")
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source)
 
+    try:
+        text = recognizer.recognize_google(audio)
+        return jsonify(text)
+    except sr.UnknownValueError:
+        return jsonify("Sorry, I couldn't understand what you said.")
+    except sr.RequestError as e:
+        return jsonify(f"Sorry, an error occurred. {e}")
 
-
-
-
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
