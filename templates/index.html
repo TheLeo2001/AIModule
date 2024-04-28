@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Learning Chatbot</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        #chat-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+        }
+        .user-message {
+            background-color: #e2f9ff;
+            padding: 5px 10px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .bot-message {
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">Language Learning Chatbot</h1>
+        <div id="chat-box" class="mt-4"></div>
+        <div id="user-input-container">
+            <input type="text" id="user-input" class="form-control" placeholder="Type your message...">
+            <button id="send-btn" class="btn btn-primary">Send</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $("#send-btn").click(function() {
+                sendMessage();
+            });
+
+            $("#user-input").keypress(function(event) {
+                if (event.which == 13) {
+                    sendMessage();
+                }
+            });
+
+            function sendMessage() {
+                var userMessage = $("#user-input").val();
+                if (userMessage.trim() !== "") {
+                    $("#chat-box").append("<div class='chat-message'><p class='user-message'>" + userMessage + "</p></div>");
+                    $("#user-input").val("");
+                    sendUserMessage(userMessage);
+                }
+            }
+
+            function sendUserMessage(message) {
+                $.ajax({
+                    type: "POST",
+                    url: "/chat",
+                    data: { user_message: message },
+                    success: function(response) {
+                        $("#chat-box").append("<div class='chat-message'><p class='bot-message'>" + response + "</p></div>");
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
