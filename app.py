@@ -13,7 +13,7 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def process_message():
-    user_message = request.json["user_message"]
+    user_message = request.form["user_message"]
     bot_response = generate_bot_response(user_message)
     return jsonify(bot_response)
 
@@ -51,17 +51,28 @@ def translate_message(message):
     if len(parts) < 2:
         return "I'm sorry, I couldn't understand your translation request."
 
-    parts = parts[1].split("into") if "into" in parts[1] else parts[1].split("in")
+    parts = parts[1].split("into") if "into" in parts[1] else parts[1].split(" in ", 1)
     if len(parts) < 2:
         return "I'm sorry, I couldn't understand your translation request."
-    
-    target_language = parts[-1].strip()
+
+    target_language = parts[-1].strip().split()[0]  # Extract the first word after 'in' or 'into'
     word_to_translate = parts[0].strip()
     
-    # Translate the word/sentence to the target language
-    translated_text = translator.translate(word_to_translate, dest=target_language).text
-    
-    return f"The translation of '{word_to_translate}' in {target_language} is '{translated_text}'."
+    # If the first word after 'in' or 'into' is a language code, translate the text before 'in' or 'into'
+    if target_language.isalpha():
+        # Translate the word/sentence to the target language
+        try:
+            translated_text = translator.translate(word_to_translate, dest=target_language).text
+            return f"The translation of '{word_to_translate}' in {target_language} is '{translated_text}'."
+        except ValueError:
+            return "Invalid destination language."
+    else:
+        # If the word after 'in' or 'into' is not a language code, treat it as part of the sentence
+        sentence_to_translate = word_to_translate + " " + parts[-1]
+        translated_text = translator.translate(sentence_to_translate, dest='en').text
+        return f"The translation of '{sentence_to_translate}' is '{translated_text}'."
+
+
 
 def engage_in_country_conversation(user_message):
     # Simple conversation agent related to countries
